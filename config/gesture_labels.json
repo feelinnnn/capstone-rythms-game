@@ -10,8 +10,8 @@
     "right"
   ],
   "num_classes": 8,
-  "samples_per_class": 4000,
-  "frames_per_session": 100,
+  "samples_per_class": 10000,
+  "frames_per_session": 200,
   "cooldown_seconds": 30,
   "label_map": {
     "close_hand_left": 0,
