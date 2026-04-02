@@ -3,13 +3,18 @@
     "close_hand",
     "open_hand",
     "pinch",
-    "L_shape"
+    "L",
+    "rock",
+    "love",
+    "v",
+    "thumb",
+    "pinky"
   ],
   "hands": [
     "left",
     "right"
   ],
-  "num_classes": 8,
+  "num_classes": 18,
   "samples_per_class": 10000,
   "frames_per_session": 200,
   "cooldown_seconds": 30,
@@ -20,13 +25,28 @@
     "open_hand_right": 3,
     "pinch_left": 4,
     "pinch_right": 5,
-    "L_shape_left": 6,
-    "L_shape_right": 7
+    "L_left": 6,
+    "L_right": 7,
+    "rock_left": 8,
+    "rock_right": 9,
+    "love_left": 10,
+    "love_right": 11,
+    "v_left": 12,
+    "v_right": 13,
+    "thumb_left": 14,
+    "thumb_right": 15,
+    "pinky_left": 16,
+    "pinky_right": 17
   },
   "display_names": {
-    "fist": "กำมือ",
+    "close_hand": "กำมือ",
     "open_hand": "แบมือ",
     "pinch": "จีบ",
-    "L_shape": "ตัวแอล"
+    "L": "ตัวแอล",
+    "rock": "ร็อค",
+    "love": "รัก",
+    "v": "วี",
+    "thumb": "โป้ง",
+    "pinky": "ก้อย"
   }
 }
