@@ -1,6 +1,32 @@
 {
-  "0": "L_left",
-  "1": "L_right",
-  "2": "pinch_left",
-  "3": "pinch_right"
+  "gestures": [
+    "close_hand",
+    "open_hand",
+    "pinch",
+    "L_shape"
+  ],
+  "hands": [
+    "left",
+    "right"
+  ],
+  "num_classes": 8,
+  "samples_per_class": 4000,
+  "frames_per_session": 100,
+  "cooldown_seconds": 30,
+  "label_map": {
+    "close_hand_left": 0,
+    "close_hand_right": 1,
+    "open_hand_left": 2,
+    "open_hand_right": 3,
+    "pinch_left": 4,
+    "pinch_right": 5,
+    "L_shape_left": 6,
+    "L_shape_right": 7
+  },
+  "display_names": {
+    "fist": "กำมือ",
+    "open_hand": "แบมือ",
+    "pinch": "จีบ",
+    "L_shape": "ตัวแอล"
+  }
 }
