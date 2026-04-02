@@ -172,7 +172,7 @@ while True:
             start_time = time.time()
 
     # วาด UI บนหน้าจอ
-    cv2.putText(image, f"[{class_key}] ID: {user_id} | Total: {current_total}/{TARGET_PER_USER}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    cv2.putText(image, f"[{class_key}] ID: {user_id} | Total: {current_total}/{TARGET_PER_USER}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
     cv2.putText(image, status_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
     cv2.putText(image, f"Mode: {current_variation}", (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 150, 0), 2)
 
