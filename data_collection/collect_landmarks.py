@@ -47,7 +47,7 @@ class_key = f"{gesture}_{hand}"
 label = LABEL_MAP[class_key]
 
 # FILE
-file_path = Path(f"{SAVE_PATH}/{class_key}.csv")
+file_path = Path(f"{SAVE_PATH}/{gesture}_{hand}_{user_id}.csv")
 
 # MEDIAPIPE
 mp_hands = mp.solutions.hands
