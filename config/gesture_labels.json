@@ -17,7 +17,7 @@
   "num_classes": 18,
   "samples_per_class": 10000,
   "frames_per_session": 200,
-  "cooldown_seconds": 30,
+  "cooldown_seconds": 10,
   "label_map": {
     "close_hand_left": 0,
     "close_hand_right": 1,
