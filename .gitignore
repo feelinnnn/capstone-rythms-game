@@ -125,3 +125,5 @@ unity/Logs/
 htmlcov/
 
 .pytest_cache/
+
+config/drive_config.json
