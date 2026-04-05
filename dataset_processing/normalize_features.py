@@ -48,6 +48,7 @@ def normalize_row(row):
             row[f"z{i}"] /= max_z
 
     return row
+
 # MAIN
 def main():
     files = list(RAW_DIR.glob("*.csv"))
@@ -61,7 +62,10 @@ def main():
 
     # normalize each file
     for f in files:
-        class_name = f.stem
+        # ตัด user_id ออกเพื่อให้ชื่อตรงกับ LABEL_MAP
+        full_name = f.stem
+        parts = full_name.split("_")
+        class_name = "_".join(parts[:-1])
 
         if class_name not in VALID_CLASSES:
             continue
