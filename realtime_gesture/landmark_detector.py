@@ -42,7 +42,7 @@ class LandmarkDetector:
 
     def release(self):
         self.hands.close()
-
+# ทดสอบการทำงานกล้อง
 if __name__ == "__main__":
     from camera_capture import CameraCapture
 
