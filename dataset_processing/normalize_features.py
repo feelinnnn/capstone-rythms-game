@@ -5,7 +5,7 @@ import json
 
 # PATH CONFIG
 FILE_PATH = Path(__file__).resolve()
-ROOT_DIR = FILE_PATH.parent.parent.parent
+ROOT_DIR = FILE_PATH.parent.parent
 
 RAW_DIR = ROOT_DIR / "data" / "raw_landmarks"
 OUTPUT_DIR = ROOT_DIR / "data" / "processed_dataset"
