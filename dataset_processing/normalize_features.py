@@ -33,23 +33,15 @@ def normalize_row(row):
     except KeyError:
         raise ValueError("Missing landmark columns")
 
-    max_val = max(
-        max(abs(x) for x in xs),
-        max(abs(y) for y in ys),
-        max(abs(z) for z in zs)
-    )
-
-    max_val = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
-
-    if max_val == 0: return row
+    # หา max
+    max_xy = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
+    max_z = max(abs(z) for z in zs)
 
     for i in range(21):
-        row[f"x{i}"] /= max_val
-        row[f"y{i}"] /= max_val
-        row[f"z{i}"] /= max_val
-
-    return row
-
+        row[f"x{i}"] /= max_xy
+        row[f"y{i}"] /= max_xy
+        if max_z > 0:
+            row[f"z{i}"] /= max_z  # Normalize z ด้วยตัวเอง
 
 # MAIN
 def main():
