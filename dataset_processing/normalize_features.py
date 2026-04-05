@@ -33,16 +33,21 @@ def normalize_row(row):
     except KeyError:
         raise ValueError("Missing landmark columns")
 
-    # หา max
+    # หาค่า max
     max_xy = max(max(abs(x) for x in xs), max(abs(y) for y in ys))
     max_z = max(abs(z) for z in zs)
 
-    for i in range(21):
-        row[f"x{i}"] /= max_xy
-        row[f"y{i}"] /= max_xy
-        if max_z > 0:
-            row[f"z{i}"] /= max_z  # Normalize z ด้วยตัวเอง
+    # ป้องกันการหารด้วย 0
+    if max_xy > 0:
+        for i in range(21):
+            row[f"x{i}"] /= max_xy
+            row[f"y{i}"] /= max_xy
+            
+    if max_z > 0:
+        for i in range(21):
+            row[f"z{i}"] /= max_z
 
+    return row
 # MAIN
 def main():
     files = list(RAW_DIR.glob("*.csv"))
