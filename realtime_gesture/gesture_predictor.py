@@ -23,7 +23,14 @@ CONFIG_PATH = get_resource_path(os.path.join("config", "gesture_labels.json"))
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5052
+<<<<<<< HEAD
 SHOW_VIDEO = False  # ปิดหน้าต่าง Python เพื่อความเร็วและไม่บังเกม
+=======
+
+# สวิตช์ปิด/เปิดหน้าต่างวิดีโอ 
+# (ตอนเทสให้เป็น True / ตอนเชื่อม Unity ให้แก้เป็น False เพื่อความเร็วสูงสุด)
+SHOW_VIDEO = True  
+>>>>>>> b617c15bb80b4e326ff46e17cbac1434bc6b0f49
 
 class GesturePredictorApp:
     def __init__(self):
@@ -31,7 +38,11 @@ class GesturePredictorApp:
         self.index_to_label = self._load_config()
         self.model = self._load_model()
         
+<<<<<<< HEAD
         self.detector = LandmarkDetector(max_hands=2) # แก้ให้รับได้ 2 มือ
+=======
+        self.detector = LandmarkDetector(max_hands=2)
+>>>>>>> b617c15bb80b4e326ff46e17cbac1434bc6b0f49
         self.extractor = FeatureExtractor()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -57,6 +68,7 @@ class GesturePredictorApp:
                     success, frame = cam.get_frame()
                     if not success: break
 
+<<<<<<< HEAD
                     # สแกนหามือ (ส่งกลับมาเป็น List ของมือที่เจอ)
                     detected_hands, annotated_frame = self.detector.process_frame(frame)
 
@@ -79,9 +91,49 @@ class GesturePredictorApp:
 
                     # ส่งเป็น JSON String
                     json_string = json.dumps(current_state)
+=======
+                    # สแกนหามือ
+                    detected_hands, annotated_frame = self.detector.process_frame(frame)
+
+                    current_state = {
+                        "left": "none",
+                        "right": "none"
+                    }
+
+                    if detected_hands:
+                        # วนลูปประมวลผลทีละข้าง
+                        for hand_info in detected_hands: 
+                            # Mirror ภาพ ต้องสลับค่ากลับให้ตรงกับความจริง
+                            raw_label = hand_info["label"]
+                            real_hand = "right" if raw_label == "left" else "left"
+                            
+                            hand_landmarks = hand_info["landmarks"]
+                            
+                            # จัดทรงและให้ AI ทายผล
+                            features = self.extractor.extract_features(hand_landmarks)
+                            prediction_index = self.model.predict([features])[0]
+                            
+                            # ได้ชื่อท่าทาง เช่น "v_right", "rock_left" 
+                            # เราสามารถตัดคำว่า _right หรือ _left ออกได้เพื่อให้ Unity เอาไปเช็กง่ายขึ้น
+                            # หรือจะส่งไปเต็มๆ ก็ได้ ในที่นี้จะส่งเต็มๆ ก่อน
+                            gesture_name = self.index_to_label[prediction_index]
+                            
+                            # จับคำตอบใส่กล่องให้ถูกข้าง
+                            current_state[real_hand] = gesture_name
+
+                    # แปลงกล่อง current_state เป็น JSON String
+                    json_string = json.dumps(current_state)
+
+                    # แปลงเป็น Bytes แล้วยิงเข้า Socket
+>>>>>>> b617c15bb80b4e326ff46e17cbac1434bc6b0f49
                     self.sock.sendto(json_string.encode('utf-8'), (UDP_IP, UDP_PORT))
 
                     if SHOW_VIDEO:
+                        # โชว์สถานะซ้าย-ขวา บนจอ
+                        status_text = f"L: {current_state['left']} | R: {current_state['right']}"
+                        cv2.putText(annotated_frame, status_text, (10, 40), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                        
                         cv2.imshow("Rhythm Game Backend", annotated_frame)
                         if cv2.waitKey(1) & 0xFF == 27: break
         finally:
