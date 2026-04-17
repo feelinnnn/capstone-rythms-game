@@ -19,7 +19,7 @@ UDP_PORT = 5052
 
 # สวิตช์ปิด/เปิดหน้าต่างวิดีโอ 
 # (ตอนเทสให้เป็น True / ตอนเชื่อม Unity ให้แก้เป็น False เพื่อความเร็วสูงสุด)
-SHOW_VIDEO = False  
+SHOW_VIDEO = True  
 
 class GesturePredictorApp:
     def __init__(self):
@@ -27,10 +27,7 @@ class GesturePredictorApp:
         self.index_to_label = self._load_config()
         self.model = self._load_model()
         
-        # สร้างดิกชันนารีเก็บ Bytes ที่แปลงรอไว้แล้ว (ไม่เสียเวลาแปลงตอนรันจริง)
-        self.encoded_labels = {idx: label.encode('utf-8') for idx, label in self.index_to_label.items()}
-        
-        self.detector = LandmarkDetector()
+        self.detector = LandmarkDetector(max_hands=2)
         self.extractor = FeatureExtractor()
         
         # สร้างท่อ Socket รอไว้
@@ -68,27 +65,46 @@ class GesturePredictorApp:
                         break
 
                     # สแกนหามือ
-                    hand_landmarks, annotated_frame = self.detector.process_frame(frame)
+                    detected_hands, annotated_frame = self.detector.process_frame(frame)
 
-                    if hand_landmarks:
-                        # จัดทรงข้อมูล 63 ตัวเลข
-                        features = self.extractor.extract_features(hand_landmarks)
-                        
-                        # ทายผล
-                        prediction_index = self.model.predict([features])[0]
-                        
-                        # ดึง Bytes ที่แปลงไว้แล้วมายิงเข้า Socket ได้เลย
-                        byte_data = self.encoded_labels[prediction_index]
-                        self.sock.sendto(byte_data, (UDP_IP, UDP_PORT))
+                    current_state = {
+                        "left": "none",
+                        "right": "none"
+                    }
 
-                        # ถ้าปิดจอไว้ โค้ดส่วนวาดภาพจะไม่ทำงาน ลดภาระ CPU ได้มหาศาล
-                        if SHOW_VIDEO:
+                    if detected_hands:
+                        # วนลูปประมวลผลทีละข้าง
+                        for hand_info in detected_hands: 
+                            # Mirror ภาพ ต้องสลับค่ากลับให้ตรงกับความจริง
+                            raw_label = hand_info["label"]
+                            real_hand = "right" if raw_label == "left" else "left"
+                            
+                            hand_landmarks = hand_info["landmarks"]
+                            
+                            # จัดทรงและให้ AI ทายผล
+                            features = self.extractor.extract_features(hand_landmarks)
+                            prediction_index = self.model.predict([features])[0]
+                            
+                            # ได้ชื่อท่าทาง เช่น "v_right", "rock_left" 
+                            # เราสามารถตัดคำว่า _right หรือ _left ออกได้เพื่อให้ Unity เอาไปเช็กง่ายขึ้น
+                            # หรือจะส่งไปเต็มๆ ก็ได้ ในที่นี้จะส่งเต็มๆ ก่อน
                             gesture_name = self.index_to_label[prediction_index]
-                            cv2.putText(annotated_frame, f"Predict: {gesture_name}", (10, 40), 
-                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                            
+                            # จับคำตอบใส่กล่องให้ถูกข้าง
+                            current_state[real_hand] = gesture_name
 
-                    # โชว์ภาพเฉพาะตอนที่เปิดสวิตช์
+                    # แปลงกล่อง current_state เป็น JSON String
+                    json_string = json.dumps(current_state)
+
+                    # แปลงเป็น Bytes แล้วยิงเข้า Socket
+                    self.sock.sendto(json_string.encode('utf-8'), (UDP_IP, UDP_PORT))
+
                     if SHOW_VIDEO:
+                        # โชว์สถานะซ้าย-ขวา บนจอ
+                        status_text = f"L: {current_state['left']} | R: {current_state['right']}"
+                        cv2.putText(annotated_frame, status_text, (10, 40), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                        
                         cv2.imshow("Rhythm Game Backend", annotated_frame)
                         if cv2.waitKey(1) & 0xFF == 27:
                             break
