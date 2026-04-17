@@ -65,9 +65,9 @@ class GesturePredictorApp:
 
                     if detected_hands:
                         for hand_info in detected_hands:
-                            # 1. เช็คว่าเป็นมือซ้ายหรือขวา (และแก้ Mirror)
+                            # 1. เช็คว่าเป็นมือซ้ายหรือขวา
                             raw_label = hand_info["label"]
-                            real_hand = "right" if raw_label == "left" else "left"
+                            real_hand = hand_info["label"].lower()
                             
                             # 2. ทำนายท่าทาง
                             features = self.extractor.extract_features(hand_info["landmarks"])
@@ -82,6 +82,9 @@ class GesturePredictorApp:
                     self.sock.sendto(json_string.encode('utf-8'), (UDP_IP, UDP_PORT))
 
                     if SHOW_VIDEO:
+                        status_text = f"L: {current_state['left']} | R: {current_state['right']}"
+                        cv2.putText(annotated_frame, status_text, (10, 40), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
                         cv2.imshow("Rhythm Game Backend", annotated_frame)
                         if cv2.waitKey(1) & 0xFF == 27: break
         finally:
