@@ -4,7 +4,8 @@ import time
 import os
 import warnings
 from pathlib import Path
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 # ปิดการแจ้งเตือนscikit-learn
 warnings.filterwarnings('ignore')
@@ -41,6 +42,9 @@ def benchmark_models():
     single_frame = X_test[0].reshape(1, -1)
     results = []
 
+    # ตรวจสอบว่ามีโฟลเดอร์ RESULTS_DIR หรือยัง ถ้ายังให้สร้างก่อน
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
     # 2. Benchmark Loop
     for model_name, file_name in MODELS_TO_COMPARE.items():
         model_path = MODELS_DIR / file_name
@@ -63,6 +67,28 @@ def benchmark_models():
         # วัดความแม่นยำ (Accuracy)
         y_pred = model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred) * 100
+
+        try:
+            cm = confusion_matrix(y_test, y_pred)
+            # ใช้ model.classes_ เพื่อดึงชื่อท่าทางมาเป็น Label 
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+            
+            # สร้างกราฟขนาด 10x8
+            fig, ax = plt.subplots(figsize=(10, 8))
+            disp.plot(cmap=plt.cm.Blues, ax=ax, xticks_rotation='vertical')
+            plt.title(f"Confusion Matrix: {model_name}")
+            plt.tight_layout()
+            
+            # เซฟรูปเก็บไว้ (เช่น MLP_cm.png)
+            cm_filename = f"{model_name.replace(' ', '_')}_cm.png"
+            cm_save_path = RESULTS_DIR / cm_filename
+            plt.savefig(cm_save_path, dpi=300)
+            
+            # ปิดกราฟเพื่อคืนหน่วยความจำ (สำคัญมากตอนรันในลูป)
+            plt.close(fig)
+            print(f"    -> [SUCCESS] Saved CM image to {cm_filename}")
+        except Exception as e:
+            print(f"    -> [ERROR] Failed to generate Confusion Matrix: {e}")
 
         # ป้องกันอาการ "Cold Start" ที่เฟรมแรกๆ จะใช้เวลาประมวลผลนานกว่าปกติ
         for _ in range(50):
