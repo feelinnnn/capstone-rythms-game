@@ -4,97 +4,129 @@ import cv2
 import socket
 import json
 import joblib
-from pathlib import Path
+import base64
 from typing import Dict
 
 from camera_capture import CameraCapture
 from landmark_detector import LandmarkDetector
 from feature_extractor import FeatureExtractor
 
-# --- ฟังก์ชันช่วยหา Path สำหรับ PyInstaller (ต้องมีเพื่อให้รัน .exe ได้) ---
+# ใช้กับ PyInstaller
 def get_resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
+    if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-# --- CONFIG ---
+# CONFIG
 MODEL_PATH = get_resource_path(os.path.join("models", "mlp_model.pkl"))
 CONFIG_PATH = get_resource_path(os.path.join("config", "gesture_labels.json"))
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 5052
-SHOW_VIDEO = True  # ปิดหน้าต่าง Python เพื่อความเร็วและไม่บังเกม
+SHOW_VIDEO = True
 
+
+# MAIN CLASS
 class GesturePredictorApp:
     def __init__(self):
         print("=== Initializing Rhythm Game Backend ===")
+
         self.index_to_label = self._load_config()
         self.model = self._load_model()
-        
-        self.detector = LandmarkDetector(max_hands=2) # แก้ให้รับได้ 2 มือ
+
+        self.detector = LandmarkDetector(max_hands=2)
         self.extractor = FeatureExtractor()
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+    # Load Config
     def _load_config(self) -> Dict[int, str]:
         try:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
+
             return {v: k for k, v in config["label_map"].items()}
+
         except Exception as e:
             raise RuntimeError(f"Config load error: {e}")
 
+    # Load Model
     def _load_model(self):
         try:
             return joblib.load(MODEL_PATH)
+
         except Exception as e:
             raise RuntimeError(f"Model load error: {e}")
 
-def run(self):
-        print(f"[*] ท่อส่ง Socket เปิดแล้ว! เป้าหมาย -> {UDP_IP}:{UDP_PORT}")
-        
-        # ตั้งชื่อหน้าต่างไว้ที่นี่ที่เดียว
-        WIN = "WEBCAM" 
-        
+    # Run Main Loop
+    def run(self):
+        WIN = "WEBCAM"
+
         try:
             with CameraCapture() as cam:
                 while True:
                     success, frame = cam.get_frame()
-                    if not success: break
+
+                    if not success:
+                        break
 
                     detected_hands, annotated_frame = self.detector.process_frame(frame)
-                    current_state = {"left": "none", "right": "none"}
 
+                    # ค่าเริ่มต้น
+                    current_state = {
+                        "left": "none",
+                        "right": "none"
+                    }
+
+                    # Predict Gesture
                     if detected_hands:
                         for hand_info in detected_hands:
                             real_hand = hand_info["label"].lower()
-                            features = self.extractor.extract_features(hand_info["landmarks"])
+
+                            features = self.extractor.extract_features(
+                                hand_info["landmarks"]
+                            )
+
                             prediction_index = self.model.predict([features])[0]
+
                             gesture_name = self.index_to_label[prediction_index]
+
                             current_state[real_hand] = gesture_name
 
-                    # ส่งข้อมูลไป Unity
-                    json_string = json.dumps(current_state)
-                    self.sock.sendto(json_string.encode('utf-8'), (UDP_IP, UDP_PORT))
+                    # Encode Frame ส่ง Unity
+                    small_frame = cv2.resize(annotated_frame, (160, 90))
 
-                    # --- แสดงหน้าต่างมุมล่างซ้าย ---
+                    _, buffer = cv2.imencode(
+                        ".jpg",
+                        small_frame,
+                        [int(cv2.IMWRITE_JPEG_QUALITY), 50]
+                    )
+
+                    jpg_as_text = base64.b64encode(buffer).decode("utf-8")
+
+                    data_to_send = {
+                        "gestures": current_state,
+                        "frame": jpg_as_text
+                    }
+
+                    json_string = json.dumps(data_to_send)
+
+                    self.sock.sendto(
+                        json_string.encode("utf-8"),
+                        (UDP_IP, UDP_PORT)
+                    )
+
+                    
                     if SHOW_VIDEO:
-                        cv2.namedWindow(WIN, cv2.WINDOW_NORMAL)
-                        cv2.resizeWindow(WIN, 140, 79)
-                        # ปรับพิกัด Y
-                        cv2.moveWindow(WIN, 0, 960) 
-                        
-                        # ปรับขนาดตัวอักษร (Scale 0.3) 
-                        status_text = f"L:{current_state['left']} R:{current_state['right']}"
-                        cv2.putText(annotated_frame, status_text, (5, 15), 
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1)
-                        
                         cv2.imshow(WIN, annotated_frame)
-                        
-                        if cv2.waitKey(1) & 0xFF == 27: break
+
+                        if cv2.waitKey(1) & 0xFF == 27:
+                            break
+
         finally:
             self.cleanup()
 
-def cleanup(self):
+    def cleanup(self):
         self.detector.release()
         self.sock.close()
         print("[*] ปิดการเชื่อมต่อเรียบร้อยแล้ว")
