@@ -4,6 +4,8 @@ import cv2
 import socket
 import json
 import joblib
+import sklearn
+import sklearn.ensemble
 import base64
 from pathlib import Path
 from typing import Dict
