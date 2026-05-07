@@ -81,9 +81,9 @@ class GesturePredictorApp:
                             current_state[real_hand] = gesture_name
 
                     # 2. เตรียมเฟรมภาพสำหรับส่ง (Base64)
-                    # Resize ให้เล็กลง (128x72) เพื่อไม่ให้ Packet ใหญ่เกินไปสำหรับ UDP
-                    small_frame = cv2.resize(annotated_frame, (128, 72))
-                    _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 30])
+                    # Resize ให้เล็กลง (160x90) เพื่อไม่ให้ Packet ใหญ่เกินไปสำหรับ UDP
+                    small_frame = cv2.resize(annotated_frame, (160, 90))
+                    _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
                     jpg_as_text = base64.b64encode(buffer).decode("utf-8")
 
                     # 3. รวมข้อมูล Gestures และ Frame เข้าด้วยกัน
