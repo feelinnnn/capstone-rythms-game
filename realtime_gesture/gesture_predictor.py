@@ -6,7 +6,6 @@ import json
 import joblib
 import sklearn
 import sklearn.ensemble
-import sklearn.neural_network
 import base64
 from pathlib import Path
 from typing import Dict
@@ -26,13 +25,12 @@ MODEL_PATH = get_resource_path(os.path.join("models", "mlp_model.pkl"))
 CONFIG_PATH = get_resource_path(os.path.join("config", "gesture_labels.json"))
 
 UDP_IP = "127.0.0.1"
-UDP_PORT = 5052        # พอร์ตสำหรับส่งเฉพาะ Gesture (JSON)
-UDP_PORT_FRAME = 5053  # พอร์ตใหม่สำหรับส่งเฉพาะ Frame (Base64)
-SHOW_VIDEO = True  
+UDP_PORT = 5052
+SHOW_VIDEO = True  # เปิดไว้สำหรับ Debug ในฝั่ง Python
 
 class GesturePredictorApp:
     def __init__(self):
-        print("=== Initializing Rhythm Game Backend (Split Port Stream) ===")
+        print("=== Initializing Rhythm Game Backend (With Frame Stream) ===")
         self.index_to_label = self._load_config()
         self.model = self._load_model()
         
@@ -55,7 +53,7 @@ class GesturePredictorApp:
             raise RuntimeError(f"Model load error: {e}")
 
     def run(self):
-        print(f"[*] ระบบเริ่มทำงาน! Gesture -> {UDP_PORT}, Frame -> {UDP_PORT_FRAME}")
+        print(f"[*] ระบบเริ่มทำงาน! ส่งข้อมูลไปที่ -> {UDP_IP}:{UDP_PORT}")
         try:
             with CameraCapture() as cam:
                 while True:
@@ -70,31 +68,38 @@ class GesturePredictorApp:
 
                     if detected_hands:
                         for hand_info in detected_hands:
-                            raw_label = hand_info["label"]
-                            real_hand = "right" if raw_label == "left" else "left"
+                            # ใช้ค่าจาก AI โดยตรง
+                            real_hand = hand_info["label"] 
                             
                             # ทำนายท่าทาง
                             features = self.extractor.extract_features(hand_info["landmarks"])
                             prediction_index = self.model.predict([features])[0]
                             gesture_name = self.index_to_label.get(prediction_index, "unknown")
                             
+                            # บันทึกลงสถานะ (ส่งไป Unity ตามฝั่งที่ AI เห็นจริงๆ)
+                            current_state[real_hand] = gesture_name
+                                                
+                            # บันทึกลงสถานะ
                             current_state[real_hand] = gesture_name
 
-                    # --- 2. ส่ง Gesture Data (พอร์ต 5052) ---
-                    # ส่งเฉพาะ JSON ก้อนเล็ก เพื่อความรวดเร็วในการกดโน้ตเกม
-                    json_string = json.dumps(current_state)
+                    # 2. เตรียมเฟรมภาพสำหรับส่ง (Base64)
+                    # Resize ให้เล็กลง (160x90) เพื่อไม่ให้ Packet ใหญ่เกินไปสำหรับ UDP
+                    small_frame = cv2.resize(annotated_frame, (160, 90))
+                    _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                    jpg_as_text = base64.b64encode(buffer).decode("utf-8")
+
+                    # 3. รวมข้อมูล Gestures และ Frame เข้าด้วยกัน
+                    data_to_send = {
+                        "gestures": current_state,
+                        "frame": jpg_as_text
+                    }
+
+                    # 4. ส่งเป็น JSON String ผ่าน UDP
+                    json_string = json.dumps(data_to_send)
                     self.sock.sendto(json_string.encode('utf-8'), (UDP_IP, UDP_PORT))
 
-                    # --- 3. เตรียมและส่ง Frame Data (พอร์ต 5053) ---
-                    # Resize และลดคุณภาพลง (เหลือ 35) เพื่อไม่ให้ Packet ใหญ่จนค้าง
-                    small_frame = cv2.resize(annotated_frame, (128, 72))
-                    _, buffer = cv2.imencode(".jpg", small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 35])
-                    jpg_as_text = base64.b64encode(buffer).decode("utf-8")
-                    
-                    # ส่งเฉพาะ String ภาพไปที่พอร์ต Frame
-                    self.sock.sendto(jpg_as_text.encode('utf-8'), (UDP_IP, UDP_PORT_FRAME))
-
                     if SHOW_VIDEO:
+                        # ใส่ข้อความ Debug บนหน้าต่าง Python ด้วย
                         cv2.putText(annotated_frame, f"L:{current_state['left']} R:{current_state['right']}", 
                                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                         cv2.imshow("Rhythm Game Backend", annotated_frame)
