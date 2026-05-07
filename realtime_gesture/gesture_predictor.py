@@ -69,8 +69,7 @@ class GesturePredictorApp:
                     if detected_hands:
                         for hand_info in detected_hands:
                             # เช็คว่าเป็นมือซ้ายหรือขวา (และแก้ Mirror ตามตรรกะโค้ดชุดล่าง)
-                            raw_label = hand_info["label"]
-                            real_hand = "right" if raw_label == "left" else "left"
+                            real_hand = hand_info["label"]
                             
                             # ทำนายท่าทาง
                             features = self.extractor.extract_features(hand_info["landmarks"])
